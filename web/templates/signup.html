@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<head>
+    <title>Bills Messages</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js" integrity="sha512-aMGMvNYu8Ue4G+fHa359jcPb1u+ytAF+P2SCb+PxrjCdO3n3ZTxJ30zuH39rimUggmTwmh2u7wvQsDTHESnmfQ==" crossorigin="anonymous"></script>
+    <script type="text/javascript" charset="utf-8">
+        $(document).ready(function() {
+            var socket = io();
+
+
+            socket.on('connect', function() {
+                socket.emit('connection');
+            });
+            socket.on('publish', function(data) {
+                var data_arr = data['data'];
+                var topic = data['topic'] + "_tbl";
+                console.log(data['topic'])
+                console.log(data)
+                console.log($('#' + topic).length)
+                if ($('#' + topic).length > 0){
+                    $('#' + topic).remove();
+                }
+                var tbl = "<table id = " + topic + " border=1>";
+                tbl += "<th>"+data['topic']+" table</th>"
+                for (var x = 0; x < data_arr.length; x++) {
+                    tbl += '<tr>';
+                    for (var i = 1; i < data_arr[x].length; i++){
+                        tbl += "<td>"+data_arr[x][i].toString()+"<t/d>";
+                    }
+                    tbl += '</tr>'
+                };
+                console.log(tbl)
+                $('#stats').append(tbl);
+                console.log(data);
+            });
+
+            socket.on('joined', function(data) {
+                $('form#' + data['sub'] + '_sub').hide();
+                $('form#' + data['sub'] + '_unsub').show();
+            });
+
+            socket.on('advert', function(data){
+                var topic = data['topic'];
+                var stats = data['data'][topic];
+                var tbl = "<table id = "+ topic+"_advert>";
+                tbl += "<th>"+topic+" stats</th>"
+                tbl += '<tr>';
+                for(var i=0; i < stats.length; i++){
+                    tbl += "<td>" + stats[i] + "</td>"
+                }
+                tbl += '</tr>'
+                $('#advert').show();
+                $('#advert').append(tbl)
+            });
+
+            socket.on('deadvertise', function(data){
+                console.log("deadvertise");
+                $('#advert').hide();
+                $('#wr_advert').hide();
+                $('#qb_advert').hide();
+                $('#te_advert').hide();
+                $('#rb_advert').hide();
+            });
+            $('form#register').submit(function(event) {
+                console.log("hopefully")
+                data = {
+                    'username': $('#usernamereg').val(),
+                    'wr': $('#wr').val(),
+                    'rb': $('#rb').val(),
+                    'qb': $('#qb').val(),
+                    'te': $('#te').val(),
+                };
+                console.log(data);
+                $('#reg').hide();
+                $('#stats').show();
+                for(key in data){
+                    if(data[key] == '1'){
+                        $('form#' + key + "_unsub").show();
+                        $('form#' + key + "_sub").hide();
+                    }
+                }
+                socket.emit('register', data);
+                return false;
+            });
+            $('form#login').submit(function(event) {
+                console.log("works")
+                $('#logind').hide();
+                $('#stats').show();
+                data = {'username': $('#username').val()}
+                socket.emit('login', data)
+                return false;
+            });
+            $('form#signup').submit(function(event) {
+                console.log("works")
+                $('#logind').hide();
+                $('#reg').show();
+                return false;
+            });
+            $('form#wr_unsub').submit(function(event) {
+                console.log("works")
+                $('form#wr_unsub').hide();
+                $('form#wr_sub').show();
+                socket.emit('unsubscribe', data = {'topic': 'wr'});
+                return false;
+            });
+            $('form#rb_unsub').submit(function(event) {
+                console.log("works")
+                $('form#rb_unsub').hide();
+                $('form#rb_sub').show();
+                socket.emit('unsubscribe', data = {'topic': 'rb'});
+                return false;
+            });
+            $('form#qb_unsub').submit(function(event) {
+                console.log("works")
+                $('form#qb_unsub').hide();
+                $('form#qb_sub').show();
+                socket.emit('unsubscribe', data = {'topic': 'qb'});
+                return false;
+            });
+            $('form#te_unsub').submit(function(event) {
+                console.log("works")
+                $('form#te_unsub').hide();
+                $('form#te_sub').show();
+                socket.emit('unsubscribe', data = {'topic': 'te'});
+                return false;
+            });
+            $('form#wr_sub').submit(function(event) {
+                console.log("works")
+                $('form#wr_sub').hide();
+                $('form#wr_unsub').show();
+                socket.emit('subscribe', data = {'topic': 'wr'});
+                return false;
+            });
+            $('form#rb_sub').submit(function(event) {
+                console.log("works")
+                $('form#rb_sub').hide();
+                $('form#rb_unsub').show();
+                socket.emit('subscribe', data = {'topic': 'rb'});
+                return false;
+            });
+            $('form#qb_sub').submit(function(event) {
+                console.log("works")
+                $('form#qb_sub').hide();
+                $('form#qb_unsub').show();
+                socket.emit('subscribe', data = {'topic': 'qb'});
+                return false;
+            });
+            $('form#te_sub').submit(function(event) {
+                console.log("works")
+                $('form#te_sub').hide();
+                $('form#te_unsub').show();
+                socket.emit('subscribe', data = {'topic': 'te'});
+                return false;
+            });
+        });
+    </script>
+
+
+</head>
+
+<body>
+    <div id="logind" name="logind">
+        <h2>Login or Sign Up!</h2>
+        <form id="login" method="POST" action="#">
+            <input type="text" placeholder="username" id = 'username' name="username" >
+            <button type="submit" value="submit">Login</button>
+        </form>
+        <br>
+        <form id="signup" method="POST" action="#">
+            <button type="submit" value="submit">Sign Up!</button>
+        </form>
+    </div>
+    <div id="reg" name="reg" hidden>
+        <h2>Sign Up!</h2>
+        <form id="register" method="POST" action="#">
+            <input type="text" placeholder="username" id = "usernamereg" name="usernamereg" >
+            <br>
+            <label for="cars">Enter 1 for topics you want to subscribe to!</label>
+            <br>
+            <label for="wr">WR</label>
+            <input type="text" placeholder="" id = "wr" name="wr" ><br>
+            <label for="rb">RB</label>
+            <input type="text" placeholder="" id = "rb" name="rb" ><br>
+            <label for="te">TE</label>
+            <input type="text" placeholder="" id = "te" name="te" ><br>
+            <label for="qb">QB</label>
+            <input type="text" placeholder="" id = "qb" name="qb" ><br>
+            <button type="submit" value="submit">Submit</button>
+        </form>
+    </div>
+    <br>
+    <div id="stats", name="stats" hidden>
+        <div id="advert" name="advert">
+        </div>
+        <dive id="subscribe" name="subscribe">
+            <form id="wr_unsub" method="POST" action="#" hidden>
+                <label for="wr">WR</label>
+                <button type="submit" value="wr_unsub">unsubscribe</button>
+            </form>
+            <form id="qb_unsub" method="POST" action="#"hidden>
+                <label for="qb">QB</label>
+                <button type="submit" value="qb_unsub">unsubscribe</button>
+            </form>
+            <form id="rb_unsub" method="POST" action="#"hidden>
+                <label for="rb">RB</label>
+                <button type="submit" value="rb_unsub">unsubscribe</button>
+            </form>
+            <form id="te_unsub" method="POST" action="#"hidden>
+                <label for="te">TE</label>
+                <button type="submit" value="te_unsub">unsubscribe</button>
+            </form>
+            <form id="wr_sub" method="POST" action="#">
+                <label for="wr">WR</label>
+                <button type="submit" value="wr_sub">subscribe</button>
+            </form>
+            <form id="qb_sub" method="POST" action="#">
+                <label for="qb">QB</label>
+                <button type="submit" value="qb_sub">subscribe</button>
+            </form>
+            <form id="rb_sub" method="POST" action="#">
+                <label for="rb">RB</label>
+                <button type="submit" value="rb_sub">subscribe</button>
+            </form>
+            <form id="te_sub" method="POST" action="#">
+                <label for="te">TE</label>
+                <button type="submit" value="te_sub">subscribe</button>
+            </form>
+        </div>
+        <ul id="statD" name = "statD">
+        </ul>
+    </div>
+    </body>
+</html>

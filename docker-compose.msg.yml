@@ -2,10 +2,17 @@ version: '3.8'
 
 services:
  web:
-  build:
-   context: .
+  build: ./web
   ports:
   - 5000:5000
+  volumes:
+  - ./:/app
+  environment:
+    FLASK_ENV: development
+ pub:
+  build: ./pub
+  ports:
+  - 5001:5000
   volumes:
   - ./:/app
   environment:
