@@ -12,7 +12,12 @@
             socket.on('connect', function() {
                 socket.emit('connection');
             });
+            socket.on('joined', function(data) {
+                console.log("we joinin");
+                socket.emit('joined', data);
+            });
             socket.on('publish', function(data) {
+                console.log('publish')
                 var data_arr = data['data'];
                 var topic = data['topic'] + "_tbl";
                 console.log(data['topic'])
@@ -63,7 +68,6 @@
                 $('#rb_advert').hide();
             });
             $('form#register').submit(function(event) {
-                console.log("hopefully")
                 data = {
                     'username': $('#usernamereg').val(),
                     'wr': $('#wr').val(),
@@ -71,7 +75,6 @@
                     'qb': $('#qb').val(),
                     'te': $('#te').val(),
                 };
-                console.log(data);
                 $('#reg').hide();
                 $('#stats').show();
                 for(key in data){
@@ -81,6 +84,7 @@
                     }
                 }
                 socket.emit('register', data);
+                console.log(data);
                 return false;
             });
             $('form#login').submit(function(event) {
@@ -125,6 +129,62 @@
                 socket.emit('unsubscribe', data = {'topic': 'te'});
                 return false;
             });
+            $('form#roster_unsub').submit(function(event) {
+                console.log("works")
+                $('form#roster_unsub').hide();
+                $('form#roster_sub').show();
+                socket.emit('unsubscribe', data = {'topic': 'roster'});
+                return false;
+            });
+            $('form#sched_unsub').submit(function(event) {
+                console.log("works")
+                $('form#sched_unsub').hide();
+                $('form#sched_sub').show();
+                socket.emit('unsubscribe', data = {'topic': 'schedule'});
+                return false;
+            });
+            $('form#opproster_unsub').submit(function(event) {
+                console.log("works")
+                $('form#opproster_unsub').hide();
+                $('form#opproster_sub').show();
+                socket.emit('unsubscribe', data = {'topic': 'opproster'});
+                return false;
+            });
+            $('form#opp_unsub').submit(function(event) {
+                console.log("works")
+                $('form#opp_unsub').hide();
+                $('form#opp_sub').show();
+                socket.emit('unsubscribe', data = {'topic': 'opponent'});
+                return false;
+            });
+            $('form#wr_unsub').submit(function(event) {
+                console.log("works")
+                $('form#wr_unsub').hide();
+                $('form#wr_sub').show();
+                socket.emit('unsubscribe', data = {'topic': 'oppwr'});
+                return false;
+            });
+            $('form#rb_unsub').submit(function(event) {
+                console.log("works")
+                $('form#rb_unsub').hide();
+                $('form#rb_sub').show();
+                socket.emit('unsubscribe', data = {'topic': 'opprb'});
+                return false;
+            });
+            $('form#oppqb_unsub').submit(function(event) {
+                console.log("works")
+                $('form#oppqb_unsub').hide();
+                $('form#oppqb_sub').show();
+                socket.emit('unsubscribe', data = {'topic': 'oppqb'});
+                return false;
+            });
+            $('form#oppte_unsub').submit(function(event) {
+                console.log("works")
+                $('form#oppte_unsub').hide();
+                $('form#oppte_sub').show();
+                socket.emit('unsubscribe', data = {'topic': 'oppte'});
+                return false;
+            });
             $('form#wr_sub').submit(function(event) {
                 console.log("works")
                 $('form#wr_sub').hide();
@@ -151,6 +211,62 @@
                 $('form#te_sub').hide();
                 $('form#te_unsub').show();
                 socket.emit('subscribe', data = {'topic': 'te'});
+                return false;
+            });
+            $('form#roster_sub').submit(function(event) {
+                console.log("works")
+                $('form#roster_sub').hide();
+                $('form#roster_unsub').show();
+                socket.emit('subscribe', data = {'topic': 'roster'});
+                return false;
+            });
+            $('form#sched_sub').submit(function(event) {
+                console.log("works")
+                $('form#sched_sub').hide();
+                $('form#sched_unsub').show();
+                socket.emit('subscribe', data = {'topic': 'schedule'});
+                return false;
+            });
+            $('form#opproster_sub').submit(function(event) {
+                console.log("works")
+                $('form#opproster_sub').hide();
+                $('form#opproster_unsub').show();
+                socket.emit('subscribe', data = {'topic': 'opproster'});
+                return false;
+            });
+            $('form#opp_sub').submit(function(event) {
+                console.log("works")
+                $('form#opp_sub').hide();
+                $('form#opp_unsub').show();
+                socket.emit('subscribe', data = {'topic': 'opponent'});
+                return false;
+            });
+            $('form#oppwr_sub').submit(function(event) {
+                console.log("works")
+                $('form#oppwr_sub').hide();
+                $('form#oppwr_unsub').show();
+                socket.emit('subscribe', data = {'topic': 'oppwr'});
+                return false;
+            });
+            $('form#rb_sub').submit(function(event) {
+                console.log("works")
+                $('form#opprb_sub').hide();
+                $('form#opprb_unsub').show();
+                socket.emit('subscribe', data = {'topic': 'opprb'});
+                return false;
+            });
+            $('form#oppqb_sub').submit(function(event) {
+                console.log("works")
+                $('form#oppqb_sub').hide();
+                $('form#oppqb_unsub').show();
+                socket.emit('subscribe', data = {'topic': 'oppqb'});
+                return false;
+            });
+            $('form#oppte_sub').submit(function(event) {
+                console.log("works")
+                $('form#oppte_sub').hide();
+                $('form#oppte_unsub').show();
+                socket.emit('subscribe', data = {'topic': 'oppte'});
                 return false;
             });
         });
@@ -210,6 +326,38 @@
                 <label for="te">TE</label>
                 <button type="submit" value="te_unsub">unsubscribe</button>
             </form>
+            <form id="roster_unsub" method="POST" action="#" hidden>
+                <label for="roster">ROSTER</label>
+                <button type="submit" value="roster_unsub">unsubscribe</button>
+            </form>
+            <form id="sched_unsub" method="POST" action="#"hidden>
+                <label for="sched">SCHEDULE</label>
+                <button type="submit" value="sched_unsub">unsubscribe</button>
+            </form>
+            <form id="opp_unsub" method="POST" action="#"hidden>
+                <label for="opp">Next Opponent</label>
+                <button type="submit" value="opp_unsub">unsubscribe</button>
+            </form>
+            <form id="opproster_unsub" method="POST" action="#"hidden>
+                <label for="opproster">Next Opponent Roster</label>
+                <button type="submit" value="opproster_unsub">unsubscribe</button>
+            </form>
+            <form id="oppte_unsub" method="POST" action="#"hidden>
+                <label for="oppte">Opponent TE</label>
+                <button type="submit" value="oppte_unsub">unsubscribe</button>
+            </form>
+            <form id="oppwr_unsub" method="POST" action="#" hidden>
+                <label for="oppwr">Opponent WR</label>
+                <button type="submit" value="oppwr_unsub">unsubscribe</button>
+            </form>
+            <form id="oppqb_unsub" method="POST" action="#"hidden>
+                <label for="oppqb">Opponent QB</label>
+                <button type="submit" value="oppqb_unsub">unsubscribe</button>
+            </form>
+            <form id="opprb_unsub" method="POST" action="#"hidden>
+                <label for="opprb">Opponent RB</label>
+                <button type="submit" value="opprb_unsub">unsubscribe</button>
+            </form>
             <form id="wr_sub" method="POST" action="#">
                 <label for="wr">WR</label>
                 <button type="submit" value="wr_sub">subscribe</button>
@@ -225,6 +373,38 @@
             <form id="te_sub" method="POST" action="#">
                 <label for="te">TE</label>
                 <button type="submit" value="te_sub">subscribe</button>
+            </form>
+            <form id="roster_sub" method="POST" action="#">
+                <label for="roster">Roster</label>
+                <button type="submit" value="roster_sub">subscribe</button>
+            </form>
+            <form id="sched_sub" method="POST" action="#">
+                <label for="sched">Schedule</label>
+                <button type="submit" value="sched_sub">subscribe</button>
+            </form>
+            <form id="opp_sub" method="POST" action="#">
+                <label for="opp">Next Opponent</label>
+                <button type="submit" value="opp_sub">subscribe</button>
+            </form>
+            <form id="opproster_sub" method="POST" action="#">
+                <label for="opproster">Next Opponent Roster</label>
+                <button type="submit" value="opproster_sub">subscribe</button>
+            </form>
+            <form id="oppwr_sub" method="POST" action="#">
+                <label for="oppwr">Opponent WR</label>
+                <button type="submit" value="oppwr_sub">subscribe</button>
+            </form>
+            <form id="oppqb_sub" method="POST" action="#">
+                <label for="oppqb">Opponent QB</label>
+                <button type="submit" value="oppqb_sub">subscribe</button>
+            </form>
+            <form id="opprb_sub" method="POST" action="#">
+                <label for="opprb">Opponent RB</label>
+                <button type="submit" value="opprb_sub">subscribe</button>
+            </form>
+            <form id="oppte_sub" method="POST" action="#">
+                <label for="oppte">Opponent TE</label>
+                <button type="submit" value="oppte_sub">subscribe</button>
             </form>
         </div>
         <ul id="statD" name = "statD">

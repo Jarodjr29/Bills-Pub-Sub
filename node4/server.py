@@ -1,21 +1,22 @@
+from functools import singledispatch
+import os
 from flask import Flask
 from flask import render_template
 from flask import request
 from flask import redirect
 from flask import url_for
 from flask_socketio import SocketIO, join_room, leave_room, send, emit
-import flask_socketio
 import mysql.connector
 import json
+import pickle
 from stmts import getStatements
 import requests
-
 app = Flask(__name__)
 socketio = SocketIO(app)
 
 def insert_reg(key, username, sid):
     mydb = mysql.connector.connect(
-        host="webdb",
+        host="node4db",
         user="root",
         password="pass",
         database="messages"
@@ -37,7 +38,6 @@ def insert_reg(key, username, sid):
         data= cursor.fetchall()
         print(data)
         data2 = {'data': data}
-        socketio.emit('joined', data2, room=sid)
     else:
         stmt = "UPDATE users SET " + key + " = 1 WHERE username = %s"
         cursor.execute(stmt, (username,))
@@ -46,14 +46,13 @@ def insert_reg(key, username, sid):
         data= cursor.fetchall()
         print(data)
         data2 = {'data': data}
-        socketio.emit('joined', data2, room=sid)
     mydb.commit()
     cursor.close()
     mydb.close()
 
 def loginDB(data, sid):
     mydb = mysql.connector.connect(
-        host="webdb",
+        host="node4db",
         user="root",
         password="pass",
         database="messages"
@@ -88,7 +87,7 @@ def loginDB(data, sid):
 @app.before_request
 def initdb2():    
     mydb = mysql.connector.connect(
-        host="webdb",
+        host="node4db",
         user="root",
         password="pass"
     )
@@ -98,21 +97,15 @@ def initdb2():
     cursor.close()
     
     mydb = mysql.connector.connect(
-        host="webdb",
+        host="node4db",
         user="root",
         password="pass",
         database="messages"
     )
-    users = '''CREATE TABLE IF NOT EXISTS users(
-        username CHAR(25) PRIMARY KEY,
-        wr CHAR(5),
-        rb CHAR(5),
-        qb CHAR(5),
-        te CHAR(5)
-        )'''
+    users = getStatements('users4')
     cursor=mydb.cursor()
     cursor.execute("CREATE TABLE IF NOT EXISTS sids (sid TEXT, username TEXT)")
-    cursor.execute(users)
+    cursor.execute(users['create'])
     cursor.execute("CREATE TABLE IF NOT EXISTS rooms (room TEXT)")
     cursor.execute("CREATE TABLE IF NOT EXISTS subjects (topics TEXT)")
     cursor.execute("CREATE TABLE IF NOT EXISTS wrSubs (input TEXT,  input2 TEXT)")
@@ -123,58 +116,65 @@ def initdb2():
     mydb.commit()
     mydb.close()
 
-    
+ 
 @app.route("/")
 def index():
     return render_template("signup.html")
 
-@app.route("/notify", methods=['GET', 'POST'])
-def notify():
-    data = json.loads(request.data)
-    topic = data['topic']
-    socketio.emit("publish", data, room=topic)
-    return 'notified'
 
-@app.route("/joinRoom", methods=['GET', 'POST'])
-def joinRoom():
+@app.route('/signup', methods = ['GET', 'POST'])
+def signup():
     data = json.loads(request.data)
-    socketio.emit('joined', data)
-    print('hello', flush=True)
-    return 'joined'
-
-@socketio.on('joined')
-def joined(data):
-    print(data, flush=True)
-    room = data['topic']
     sid = data['sid']
-    join_room(room, sid)
-    return "joined"
+    username = data['username']
+    for key in data.keys():
+        if data[key] == '1':
+            node = routing(key)
+            if node == 'node4':
+                insert_reg(key, username, sid)
+            else:
+                send = "http://" + node + ":500" + node[-1] + "/register"
+                requests.post(send, json.dumps(data))
 
+@app.route('/reg', methods=['GET', 'POST'])
+def register():
+    data = json.loads(request.data)
+    sid = data['sid']
+    username = data['username']
+    for key in data.keys():
+        if data[key] == '1':
+            node = routing(key)
+            if node == 'node4':
+                insert_reg(key, username, sid)
+            else:
+                send = "http://" + node + ":500" + node[-1] + "/register"
+                data = {'username': username, 'sid': sid, key: '1'}
+                requests.post(send, json.dumps(data))
+    return('registered')
 
-
-@socketio.on('register')
-def subscribe(data):
-    sid = request.sid
-    data['sid'] = sid
-    data = json.dumps(data)
-    send(data)
-
-def send(data):
-    print("send", flush=True)
-    requests.post('http://node4:5004/unsubscribe', data)
-    requests.post('http://node4:5004/user', data)
-    print("send", flush=True)
-
-@socketio.on('unsubscribe')
-def unsubscribe(data):
-    requests.post()
-    unsub(data, request.sid)
-    leave_room(data['topic'])
-    print(data)
+@app.route('/unsubscribe', methods = ['GET', 'POST'])
+def unsubscribe():
+    data = json.loads(request.data)
+    sid = data['sid']
+    username = data['username']
+    su = {'sid': sid, 'username': username}
+    requests.post('http://node4:5004/user', json.dumps(su))
+    for key in data.keys():
+        print(key, flush=True)
+        if data[key] == '1':
+            node = routing(key)
+            if node == 'node4':
+                insert_reg(key, username, sid)
+            else:
+                print('hello', flush=True)
+                send = "http://" + node + ":500" + node[-1] + "/unsubscribe"
+                sd = {'username': username, 'sid': sid, key: '1'}
+                requests.post(send, json.dumps(sd))
+    return('registered')
 
 def unsub(data1, sid):
     mydb = mysql.connector.connect(
-        host="webdb",
+        host="node4db",
         user="root",
         password="pass",
         database="messages"
@@ -191,17 +191,21 @@ def unsub(data1, sid):
     cursor.close()
     mydb.close()
 
-@socketio.on('subscribe')
-def subscribe(data):
-    sid = request.sid
-    data['sid'] = sid
-    data = json.dumps(data)
-    x = requests.post('http://node4:5004/subscribe', data)
-    print(x.status_code, flush=True)
+@app.route('/subscribe', methods = ['GET', 'POST'])
+def subscribe():
+    data = json.loads(request.data)
+    node = routing(data['topic'])
+    if node == 'node4':
+        sub(data, data['sid'])
+        return 'sub'
+    else:
+        send = "http://" + node + ":500" + node[-1] + "/subscribe"
+        requests.post(send, request.data)
+        return 'routed'
 
 def sub(data1, sid):
     mydb = mysql.connector.connect(
-        host="webdb",
+        host="node4db",
         user="root",
         password="pass",
         database="messages"
@@ -210,28 +214,61 @@ def sub(data1, sid):
     stmt = "SELECT * FROM sids WHERE sid = %s"
     cursor.execute(stmt, (sid,))
     data= cursor.fetchall()
-    username = data[1][1]
+    username = data[0][1]
     topic = data1['topic']
-    stmt = "UPDATE users SET " + topic + " = 1 WHERE username = %s"
-    cursor.execute(stmt, (username,))
+    stmt = "SELECT username FROM users WHERE username = %s"
+    cursor.execute(stmt, (username, ))
+    data = cursor.fetchall()
+    if len(data) == 0:
+        stmt = "INSERT INTO users(username, " + topic + ") VALUES (%s, 1)"
+        cursor.execute(stmt, (username,))
+    else:
+        stmt = "UPDATE users SET " + topic + " = 1 WHERE username = %s"
+        cursor.execute(stmt, (username,))
     mydb.commit()
     cursor.close()
     mydb.close()
+    data = json.dumps({'topic': topic, 'sid': sid})
+    print("subbing", flush=True)
+    requests.post('http://web:5005/joinRoom', data)
+    return 'subbed'
 
 @socketio.on('login')
 def login(data):
     loginDB(data, request.sid)
     print(data)
     
-
-@app.route("/signup", methods = ['GET', 'POST'])
-def signup():
-    return render_template('signup.html')
+@app.route("/user", methods=['GET', 'POST'])
+def user():
+    data = json.loads(request.data)
+    sid = data['sid']
+    username = data['username']
+    mydb = mysql.connector.connect(
+        host="node4db",
+        user="root",
+        password="pass",
+        database="messages"
+    )
+    cursor = mydb.cursor()
+    stmt = "SELECT * FROM sids WHERE username = %s"
+    cursor.execute(stmt, (username,))
+    exists = cursor.fetchall()
+    if len(exists) == 0:
+        stmt = "INSERT INTO sids (sid, username) VALUES (%s, %s)"
+        cursor.execute(stmt, (sid, username, ))
+    else:
+        stmt = "UPDATE sids SET sid = %s WHERE username = %s" 
+        cursor.execute(stmt, (sid, username,))
+    requests.post('http://node3:5003/user', json.dumps(data))
+    mydb.commit()
+    cursor.close()
+    mydb.close()
+    return 'user'
 
 @app.route("/advertise", methods=['GET', 'POST'])
 def advertise():
     mydb = mysql.connector.connect(
-        host="webdb",
+        host="node4db",
         user="root",
         password="pass",
         database="messages"
@@ -250,19 +287,21 @@ def deadvertise():
     data = json.loads(request.data)
     socketio.emit("deadvertise", data)
     return 'deadvertised'
-    
+
 @app.route("/publish", methods = ['GET', 'POST'])
 def publish():
     data = json.loads(request.data)
     mydb = mysql.connector.connect(
-        host="webdb",
+        host="node4db",
         user="root",
         password="pass",
         database="messages"
     )
     cursor = mydb.cursor()
-    data = json.loads(request.data)
     key = data['key'].lower()
+    node = routing(key)
+    if node != 'node4':
+        requests.post("http://" + node + ":500" + node[-1] + "/publish", data=request.data)
     data = data[key.upper()]
     stmts = getStatements(key)
     drop = "DROP TABLE IF EXISTS " + key
@@ -271,16 +310,14 @@ def publish():
     cursor.execute(create)
     mydb.commit()
     cols = stmts['cols']
-    num = len(data['season_x'].keys())
+    num = len(data['week'].keys())
     sql_list = [[i] for i in range(0,num)]
     for col in cols:
         obj = data[col]
         for k, v in obj.items():
-            print(int(k))
             sql_list[int(k)].append(v)
 
     sql = [tuple(i,) for i in sql_list] 
-    print(sql)
     insert = stmts['insert']
     cursor.executemany(insert, sql)
     mydb.commit()
@@ -289,26 +326,51 @@ def publish():
     results = cursor.fetchall()
     cols.insert(0, 'index')
     results.insert(0, cols)
-    print(results)
     stmt = "SELECT room FROM rooms WHERE room = (%s)"
     cursor.execute(stmt, (key,))
     data= cursor.fetchall()
     cursor.close()
     mydb.close()
     data2 = {'topic': key, 'data': results}
-    if len(data)==0:
-        print('fail')
-    else:
-        cursor.close()
-        mydb.close()
-        socketio.emit("publish", data2, room=key)
+    requests.post('http://web:5005/notify', json.dumps(data2))
     return 'published'
-
 
 @socketio.on('connection')
 def connection():
     print("connection")
 
+def routing(topic):
+    nodes = {
+    'wr': 'node1',
+    'rb': 'node1',
+    'qb': 'node1',
+    'te': 'node1',
+    'roster': 'node2',
+    'schedule': 'node2',
+    'opponent': 'node3',
+    'opproster': 'node3',
+    'oppwr': 'node4',
+    'opprb': 'node4',
+    'oppqb': 'node4',
+    'oppte': 'node4',
+    }
+    if nodes[topic] == 'node4':
+        return('node4')
+    else: 
+        #stmt = "SELECT connection FROM connections WHERE node = (%s)"
+        #cursor.execute(stmt, ('node4',))
+        #cur = cursor.fetchall()
+        #connections = cur[1]
+        if int(nodes[topic][-1]) < 4:
+            return('node3')
+        #else:
+        #    node = "node4"
+        #    for x in range(3, 4 - 1):
+        #        if connections[x] == 1:
+        #            node = "node" + x
+                        
+
+
+
 if __name__ == '__main__':
-    initdb2()
-    socketio.run(app, debug=True, port=5005, host='0.0.0.0')
+    socketio.run(app, port=5004, host='0.0.0.0', debug=True)
